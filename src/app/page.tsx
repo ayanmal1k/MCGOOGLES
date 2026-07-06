@@ -238,6 +238,73 @@ function Magnetic({ children }: { children: React.ReactElement }) {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"summary" | "rubric">("summary");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEntering, setIsEntering] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mediaQuery.matches) {
+      setPrefersReducedMotion(true);
+      setIsLoading(false);
+      setIsEntering(false);
+      return;
+    }
+
+    // Lock scroll
+    document.body.style.overflow = "hidden";
+
+    const enterTimer = setTimeout(() => {
+      setIsEntering(false);
+    }, 1200);
+
+    const loadTimer = setTimeout(() => {
+      setIsLoading(false);
+      document.body.style.overflow = "";
+    }, 2500);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimeout(loadTimer);
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const loaderLetterVariants = {
+    initial: {
+      y: 80,
+      opacity: 0,
+      scale: 0.8,
+      rotate: -10,
+      color: "#FFC700",
+    },
+    enter: (i: number) => ({
+      y: 0,
+      opacity: 1,
+      scale: 1,
+      rotate: 0,
+      color: "#FFC700",
+      transition: {
+        type: "spring" as const,
+        stiffness: 140,
+        damping: 12,
+        delay: i * 0.06,
+      }
+    }),
+    wave: (i: number) => ({
+      y: [0, -16, 0],
+      scale: [1, 1.22, 1],
+      rotate: [0, -6, 0],
+      color: ["#FFC700", "#DD1021", "#FFC700"],
+      transition: {
+        duration: 1.0,
+        ease: "easeInOut" as const,
+        repeat: Infinity,
+        repeatDelay: 1.5,
+        delay: i * 0.08,
+      }
+    })
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -279,13 +346,47 @@ export default function Home() {
 
   return (
     <>
+      {/* Page Loader */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            key="loader"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
+            className="loader-overlay"
+          >
+            <div className="loader-text-wrapper">
+              {"MCGOOGLES".split("").map((letter, idx) => (
+                <motion.span
+                  key={`loader-char-${idx}`}
+                  layoutId={`char-${idx}`}
+                  className="loader-letter"
+                  variants={loaderLetterVariants}
+                  initial="initial"
+                  animate={isEntering ? "enter" : "wave"}
+                  custom={idx}
+                >
+                  {letter}
+                </motion.span>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Hero Wrapper */}
       <section className="hero-wrapper">
         {/* Ambient Interactive Particle Canvas */}
         <AmbientBackground />
 
         {/* Header Navigation */}
-        <header className={`hero-header-pill ${isMobileMenuOpen ? "is-open" : ""}`}>
+        <motion.header
+          initial={{ opacity: 0, y: -20, x: "-50%" }}
+          animate={isLoading ? { opacity: 0, y: -20, x: "-50%" } : { opacity: 1, y: 0, x: "-50%" }}
+          transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.4 }}
+          className={`hero-header-pill ${isMobileMenuOpen ? "is-open" : ""}`}
+        >
           <div className="header-inner">
             {/* Logo + Name */}
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
@@ -355,7 +456,7 @@ export default function Home() {
               </motion.div>
             )}
           </AnimatePresence>
-        </header>
+        </motion.header>
 
         {/* Content Area - Two-Column Grid */}
         <div className="hero-grid-container container">
@@ -364,7 +465,7 @@ export default function Home() {
             <motion.div
               variants={containerVariants}
               initial="hidden"
-              animate="show"
+              animate={isLoading ? "hidden" : "show"}
               className="hero-content"
             >
               {/* Green Pill Badge */}
@@ -376,14 +477,21 @@ export default function Home() {
               <motion.h1 variants={itemVariants} className="hero-title">
                 MEET<br />
                 <span className="text-highlight hero-bouncy-logo-wrapper">
-                  {"MCGOOGLES".split("").map((letter, idx) => (
-                    <span 
-                      key={idx} 
+                  {!isLoading && "MCGOOGLES".split("").map((letter, idx) => (
+                    <motion.span 
+                      key={`hero-char-${idx}`} 
+                      layoutId={`char-${idx}`}
                       className="hero-bouncy-letter"
                       style={{ transitionDelay: `${idx * 0.02}s` }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 150,
+                        damping: 18,
+                        mass: 0.6,
+                      }}
                     >
                       {letter}
-                    </span>
+                    </motion.span>
                   ))}
                 </span>
               </motion.h1>
@@ -436,7 +544,7 @@ export default function Home() {
             <motion.div
               variants={containerVariants}
               initial="hidden"
-              animate="show"
+              animate={isLoading ? "hidden" : "show"}
               className="hero-image-container"
             >
               <motion.img
@@ -907,6 +1015,49 @@ export default function Home() {
           .btn-primary, .btn-secondary {
             justify-content: center;
             width: 100%;
+          }
+        }
+
+        .loader-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: #080808;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          pointer-events: all;
+          overflow: hidden;
+        }
+
+        .loader-text-wrapper {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 4px;
+          max-width: 100%;
+          padding: 0 var(--space-4);
+          box-sizing: border-box;
+        }
+
+        .loader-letter {
+          font-family: var(--font-display), sans-serif;
+          font-size: clamp(3.5rem, 8vw, 7.5rem);
+          font-weight: 900;
+          color: #FFC700;
+          text-shadow: 3px 3px 0px #8A1F0C, 6px 6px 0px rgba(0, 0, 0, 0.3);
+          display: inline-block;
+          user-select: none;
+          transform-origin: center bottom;
+        }
+
+        @media (max-width: 768px) {
+          .loader-letter {
+            font-size: clamp(1.8rem, 8vw, 3.5rem);
+            text-shadow: 2px 2px 0px #8A1F0C, 4px 4px 0px rgba(0, 0, 0, 0.3);
           }
         }
 
