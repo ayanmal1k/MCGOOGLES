@@ -3,6 +3,7 @@ import { Sora, Syne } from "next/font/google";
 import "./globals.css";
 import SmoothScroll from "@/components/SmoothScroll";
 import CustomCursor from "@/components/CustomCursor";
+import Script from "next/script";
 
 const sora = Sora({
   variable: "--font-body",
@@ -66,6 +67,11 @@ export default function RootLayout({
           <CustomCursor />
           {children}
         </SmoothScroll>
+        <Script
+          src="https://cdn.zanderio.ai/widget/loader.js"
+          data-id="wdg_UgdrBA01NcJsOMixYiBJCO0w"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
